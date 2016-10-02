@@ -208,7 +208,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+	thread_yield ();	/*if this thread's priority is bigger than current's, this thread will run. */
   return tid;
 }
 
@@ -344,13 +344,48 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_yield();
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+	int priority = thread_current ()->priority;
+	int donated_priority = thread_current ()->donated_priority;
+
+	if(priority < donated_priority)
+		return donated_priority;
+	else
+		return priority;
+}
+
+/* Returns the thread's priority. */
+int
+get_priority (struct thread *t)
+{
+	int priority = t->priority;
+	int donated_priority = t->donated_priority;
+
+	if(priority < donated_priority)
+		return donated_priority;
+	else
+		return priority;
+}
+
+/* Donate priority to lock holder  */
+void
+donate_priority (struct lock *lock, int donation)
+{
+	struct thread *t = lock->holder;
+	if(t == NULL)
+		return;
+	if(t->donated_priority < donation)
+	{
+		t->donated_priority = donation;
+		if(!(t->waiting == NULL))
+			donate_priority (t->waiting, donation);
+	}
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -468,6 +503,9 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->donated_priority = PRI_MIN;		/* Set initial donated_priority. */
+  list_init (&(t->lock_list));			/* Initialize thread's lock list. */
+  t->waiting = NULL;					/* Initialize lock address which thread is waiting. */
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
 }
@@ -485,6 +523,15 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+/* The function for ready_thread sorting. */
+/*static bool list_high_func_priority (struct list_elem *a, struct list_elem *b, void *aux )
+{
+	struct thread *t1 = list_entry(a, struct thread, elem);
+	struct thread *t2 = list_entry(b, struct thread, elem);
+
+	return get_priority (t1) > get_priority (t2);
+}*/
+
 /* Chooses and returns the next thread to be scheduled.  Should
    return a thread from the run queue, unless the run queue is
    empty.  (If the running thread can continue running, then it
@@ -493,10 +540,29 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
+	struct list_elem *e;
+	struct thread *T;
+	struct thread *t;
+
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+	{
+		
+		T = list_entry( list_begin (&ready_list), struct thread, elem);
+		for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e))
+		{
+			t = list_entry (e, struct thread, elem);
+			if (get_priority(T) < get_priority(t))
+				T = t;
+		}
+		list_remove (&(T->elem));
+		return T;
+		/*
+		list_sort (&ready_list, list_high_func_priority,  NULL);
+		return list_entry(list_pop_front(&ready_list), struct thread, elem);
+		*/
+	}
 }
 
 /* Completes a thread switch by activating the new thread's page

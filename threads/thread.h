@@ -90,7 +90,8 @@ struct thread
     int priority;                       /* Priority. */
 	int donated_priority;				/* Donated priority*/
     struct list_elem allelem;           /* List element for all threads list. */
-
+	struct list lock_list;				/* Save lock which thread acquired.  */
+	struct lock *waiting;				/* Save lock which thread is waiting. */
 	/* Save wake up time for sleeping thread */
 	int64_t wakeup_tick;				/* Time that is needed to be slept  */
 
@@ -136,7 +137,8 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-int get_priority (struct thread *t);	/*get priority*/
+int get_priority (struct thread *t);						/*get priority*/
+void donate_priority (struct lock *lock, int donation);		/* Donate priority to lock holder  */
 
 int thread_get_nice (void);
 void thread_set_nice (int);
