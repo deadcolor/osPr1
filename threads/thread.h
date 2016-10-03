@@ -92,6 +92,11 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 	struct list lock_list;				/* Save lock which thread acquired.  */
 	struct lock *waiting;				/* Save lock which thread is waiting. */
+
+	/* Save mlfqs related variable */
+	int nice;							/* Save nice value */
+	int recent_cpu;						/* Save recent_cpu value */
+
 	/* Save wake up time for sleeping thread */
 	int64_t wakeup_tick;				/* Time that is needed to be slept  */
 
@@ -137,12 +142,18 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-int get_priority (struct thread *t);						/*get priority*/
-void donate_priority (struct lock *lock, int donation);		/* Donate priority to lock holder  */
+int get_priority (struct thread *t);						/* Get priority or donated priority. */
+void donate_priority (struct lock *lock, int donation);		/* Donate priority to lock holder.  */
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void mlfqs_priority_update(struct thread *t);	/* Update priority using nice and recent_cpu*/
+void mlfqs_cpu_update(struct thread *t);	/* Update recent_cpu */
+void mlfqs_avg_update(void);				/* Update load_avg*/
+void mlfqs_recent_cpu_increase(void);			/* Increase current cpu's recent_cpu */
+void mlfqs_every_update(void);				/* Update priority and recent_cpu per second*/
 
 #endif /* threads/thread.h */
