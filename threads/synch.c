@@ -218,6 +218,22 @@ lock_acquire (struct lock *lock)
   t->waiting = NULL;
   lock->holder = t;
   list_push_back (&(t->lock_list), &(lock->lock_elem));	/* Put lock to thread's lock_list  */
+
+  if(!(list_empty (&((lock->semaphore).waiters))))
+  {
+	  struct list_elem *e;
+ 	  struct thread *T1;
+  	  struct thread *T2;
+
+	  T1 = list_entry (list_begin (&((lock->semaphore).waiters)), struct thread,  elem);
+	  for (e = list_begin (&((lock->semaphore).waiters)); e != list_end (&((lock->semaphore).waiters)); e = list_next (e))
+	  {
+		  T2 = list_entry (e, struct thread, elem);
+		  if (get_priority (T1) < get_priority (T2))
+			  T1 = T2;
+	  }
+	  donate_priority (lock, get_priority (T1));
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
