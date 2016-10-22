@@ -38,12 +38,34 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  /* Parse file_name to know real file name */
+	char *file_name_real= malloc(strlen(file_name)+1);
+	char *save_ptr;
+	strlcpy (file_name_real, file_name, strlen(file_name)+1);
+	file_name_real = strtok_r(file_name_real," ",&save_ptr);
+
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (file_name_real, PRI_DEFAULT, start_process, fn_copy);
+  
+  /* deallocate file_name_real */
+  free(file_name_real);
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
 }
+
+/* Parsing argument & Save stack correctly */
+void argument_parse(int count, char **parse, void **esp)
+{
+	//esp = 0xbfffffc
+	*esp -=4;
+
+	//last parameter
+	//*(int *)(* esp) = 
+
+}
+
 
 /* A thread function that loads a user process and starts it
    running. */
@@ -88,7 +110,8 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+	while(1);
+	return -1;
 }
 
 /* Free the current process's resources. */
